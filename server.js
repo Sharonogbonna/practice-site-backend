@@ -25,6 +25,7 @@ mongoose.connect(mongoURI, {
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 
+// app.use(cors({origin: '*'}))
 app.use(
     cors({
         //nothing will work if this isnt there
@@ -56,12 +57,15 @@ app.post('/register', (req,res) => {
     //need to use then because some mongoose functions no longer accept callback functions
     .then(async (err,doc) => {
         if(err) throw err;
-        //a document means that there is already someone registered in the database with the same document
+        //if there is a document means that there is already someone registered in the database with the same document
         if(doc) res.send('User Already Exists');
         if(!doc){
+            const hashedPassword = await bcrypt.hash(req.body.password, 10)
+
             const newUser = new User({
                 username: req.body.username,
-                password: req.body.password
+                password: hashedPassword,
+                email: req.body.username
             });
             await newUser.save();
             res.send('User Created');
