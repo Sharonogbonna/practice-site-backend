@@ -1,5 +1,6 @@
 
 const mongoose = require("mongoose");
+require('dotenv').config();
 //for server
 const express = require("express");
 //for secruity cross origin
@@ -15,12 +16,21 @@ const bcrypt = require("bcryptjs");
 const session = require("express-session");
 //parse the request and response objects
 const bodyParser = require("body-parser");
+//environmental variables
 const app = express();
-const User = require("./user");
+const mongoURI = process.env.MONGO_URI
+//models
+const User = require('./models/userSchema')
 
+mongoose.connect(mongoURI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}, console.log('Mongoose is connected')
+)
 //Middleware
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
+
 app.use(
     cors({
         //nothing will work if this isnt there
@@ -40,6 +50,9 @@ app.use(
 app.use(cookieParser("secretcode"))
 
 //ROUTES
+app.get('/', (req,res) => {
+    res.send('This is my practice backend')
+})
 app.post('/login', (req,res) => {
     console.log(req.body)
 })
@@ -49,10 +62,9 @@ app.post('/register', (req,res) => {
 app.post('/login', (req,res) => {
     console.log(req.body)
 })
-app.post('/user', (req,res) => {
-    console.log(req.body)
+app.get('/user', (req,res) => {
 })
 //Start Server
-app.listen(3001, () => {
+app.listen(3001, function () {
     console.log("Server Has Started");
   });
