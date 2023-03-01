@@ -9,12 +9,12 @@ const cookieParser = require("cookie-parser"); //to parse all of the cookies we 
 const bcrypt = require("bcryptjs"); //for hashing that passwords
 const session = require("express-session");
 const bodyParser = require("body-parser"); //parse the request and response objects
-
 //environmental variables
 const app = express();
 const mongoURI = process.env.MONGO_URI
 //models
 const User = require('./models/userSchema')
+//---------------END OF IMPORTS ------------------------------
 
 mongoose.connect(mongoURI, {
     useNewUrlParser: true,
@@ -25,7 +25,6 @@ mongoose.connect(mongoURI, {
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 
-// app.use(cors({origin: '*'}))
 app.use(
     cors({
         //nothing will work if this isnt there
@@ -43,7 +42,11 @@ app.use(
   );
 //for the cookie parser you want to use the same secret that you have in session
 app.use(cookieParser("secretcode"))
-
+//initialize passport and session
+app.use(passport.initialize())
+app.use(passport.session())
+require('./controllers/passportConfig')(passport) //how to pass the same instance of passport for all things
+//---------------END OF MIDDLEWARE ------------------------------
 //ROUTES
 app.get('/', (req,res) => {
     res.send('This is my practice backend')
@@ -56,9 +59,8 @@ app.post('/register', (req,res) => {
     User.findOne({ username: req.body.username })
     //need to use then because some mongoose functions no longer accept callback functions
     .then(async (err,doc) => {
-        if(err) throw err;
+        if(err) throw err
         //if there is a document means that there is already someone registered in the database with the same document
-        if(doc) res.send('User Already Exists');
         if(!doc){
             const hashedPassword = await bcrypt.hash(req.body.password, 10)
 
@@ -67,16 +69,30 @@ app.post('/register', (req,res) => {
                 password: hashedPassword,
                 email: req.body.username
             });
-            await newUser.save();
-            res.send('User Created');
+            await newUser.save()
+            res.send('User Created')
         }
+    }).catch((doc) => {
+        res.send('There is already an account associated with that username')
     })
 })
-app.post('/login', (req,res) => {
-    console.log(req.body)
+app.post('/login', (req, res, next) => {
+   passport.authenticate("local", (err, user, info) =>{
+    if(err) throw err
+    if(!user) res.send('No User Exists')
+    else{
+        req.logIn(user, err => {
+            if(err) throw err;
+            res.send('Successfully Authenticated')
+            console.log(req.user)
+        })
+    }
+   })(req, res, next)
 })
 app.get('/user', (req,res) => {
+    res.send(req.user) // stores the entire user that has been authenticated inside of it
 })
+
 //Start Server
 app.listen(3001, function () {
     console.log("Server Has Started");
